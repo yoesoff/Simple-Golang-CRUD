@@ -3,11 +3,12 @@
     <title></title>
     </head>
     <body>
-           <tr>
-               <td>{{ .Uid }}</td>
-               <td>{{ .Username }}</td>
-               <td>{{ .Departname}}</td>
-               <td>{{ .Created}}</td>
-           </tr>
+           <ul>
+               <li>{{ .Uid }}</td>
+               <li>{{ .Username }}</td>
+               <li>{{ .Departname}}</td>
+               <li>{{ .Created}}</td>
+           </li>
+           <a href="/">Back</a>
     </body>
 </html>

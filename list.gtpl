@@ -32,7 +32,7 @@
                <td>{{ .Created}}</td>
                <td> 
                
-                   <a href="/create">Create</a>
+                   <a href="/update?id={{.Uid}}">update</a>
                    <a href="/delete?id={{.Uid}}">delete</a>
 
                </td>

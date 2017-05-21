@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -51,14 +52,12 @@ func (App *App) indexHander(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println(users)
 	t.Execute(w, users)
-
 }
 
 func (App *App) viewHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
-	created := ""
 	user := new(User)
-	err := App.db.QueryRow("SELECT * FROM userinfo WHERE uid=?", id).Scan(&user.Uid, &user.Username, &user.Departname, &created)
+	err := App.db.QueryRow("SELECT * FROM userinfo WHERE uid=?", id).Scan(&user.Uid, &user.Username, &user.Departname, &user.Created)
 	checkErr(err)
 	fmt.Println(user)
 
@@ -73,19 +72,50 @@ func (App *App) createHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// POST goes here
 		r.ParseForm()
-		stmt, err := App.db.Prepare("INSERT userinfo SET username=?,departname=?,created=?")
-		checkErr(err)
+		var id int64
+		if r.Form["uid"][0] != "" {
+			stmt, err := App.db.Prepare("update userinfo set username=?, departname=? where uid=?")
+			checkErr(err)
 
-		res, err := stmt.Exec(r.Form["username"][0], r.Form["departname"][0], time.Now())
-		checkErr(err)
+			res, err := stmt.Exec(r.Form["username"][0], r.Form["departname"][0], r.Form["uid"][0])
+			checkErr(err)
 
-		id, err := res.LastInsertId()
-		checkErr(err)
+			affect, err := res.RowsAffected()
+			checkErr(err)
 
-		fmt.Println(id)
+			id, err = strconv.ParseInt(r.Form["uid"][0], 10, 64)
+			checkErr(err)
+
+			fmt.Println(affect)
+		} else {
+			stmt, err := App.db.Prepare("INSERT userinfo SET username=?,departname=?,created=?")
+			checkErr(err)
+
+			res, err := stmt.Exec(r.Form["username"][0], r.Form["departname"][0], time.Now())
+			checkErr(err)
+
+			id, err = res.LastInsertId()
+			checkErr(err)
+
+			fmt.Println(id)
+
+		}
 
 		http.Redirect(w, r, "/view?id="+fmt.Sprintf("%d", id), 301)
 	}
+}
+
+func (App *App) editHandler(w http.ResponseWriter, r *http.Request) {
+	user := new(User)
+
+	id := r.URL.Query().Get("id")
+
+	err := App.db.QueryRow("SELECT * FROM userinfo WHERE uid=?", id).Scan(&user.Uid, &user.Username, &user.Departname, &user.Created)
+	checkErr(err)
+	fmt.Println(user)
+
+	t, _ := template.ParseFiles(App.folderpath + "/form.gtpl")
+	t.Execute(w, user)
 
 }
 
@@ -98,7 +128,6 @@ func (App *App) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	checkErr(err)
 	fmt.Println(res)
 	http.Redirect(w, r, "/", 301)
-
 }
 
 func checkErr(err error) {
@@ -114,6 +143,7 @@ func main() {
 
 	http.HandleFunc("/", app.indexHander) // setting router rule
 	http.HandleFunc("/create", app.createHandler)
+	http.HandleFunc("/update", app.editHandler)
 	http.HandleFunc("/view", app.viewHandler)
 	http.HandleFunc("/delete", app.deleteHandler)
 
